@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
 
 #pragma pack(push, 1)
 struct TGAHeader
@@ -37,13 +38,10 @@ struct TGAColor
 
 	TGAColor(const uint8_t* bgraData, uint8_t bytesPerPixel)
 	{
+		memset(DataBGRA, 0, sizeof(DataBGRA));
 		for (uint8_t i = 0; i < bytesPerPixel; i++)
 		{
 			DataBGRA[i] = bgraData[i];
-		}
-		for (uint8_t i = bytesPerPixel; i < 4; i++)
-		{
-			DataBGRA[i] = 0;
 		}
 
 		B = DataBGRA[0];
@@ -63,12 +61,16 @@ public:
 	bool ReadTGAImage(const char* filename);
 	bool WriteTGAImage(const char* filename);
 
+	TGAColor GetPixel(int x, int y);
 	bool SetPixel(int x, int y, const TGAColor& c);
 
 	uint16_t GetWidth() const { return m_Width; }
 	uint16_t GetHeight() const { return m_Height; }
 	uint8_t GetBytesPerPixel() const { return m_BytesPerPixel; }
 	uint8_t* GetBuffer() const { return m_Data; }
+
+	bool FlipVertical();
+	bool FlipHorizontal();
 private:
 	uint16_t m_Width = 0, m_Height = 0;
 	uint8_t m_BytesPerPixel = 0;

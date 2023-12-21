@@ -122,6 +122,14 @@ bool TGAImage::WriteTGAImage(const char* filename)
 	return true;
 }
 
+TGAColor TGAImage::GetPixel(int x, int y)
+{
+	if (!m_Data || x < 0 || y < 0 || x >= m_Width || y >= m_Height)
+		return TGAColor();
+
+	return TGAColor(m_Data + (x + y * m_Width) * m_BytesPerPixel, m_BytesPerPixel);
+}
+
 bool TGAImage::SetPixel(int x, int y, const TGAColor& c)
 {
 	if (!m_Data)
@@ -132,5 +140,45 @@ bool TGAImage::SetPixel(int x, int y, const TGAColor& c)
 	
 	memcpy(m_Data + (x + y * m_Width) * m_BytesPerPixel, c.DataBGRA, m_BytesPerPixel);
 	return true;
+}
+
+bool TGAImage::FlipVertical()
+{
+	if (!m_Data)
+		return false;
+
+	unsigned long bytesPerLine = m_Width * m_BytesPerPixel;
+	uint8_t* line = new uint8_t[bytesPerLine];
+	uint16_t halfHeight = m_Height >> 1;
+	for (uint16_t i = 0; i < halfHeight; i++)
+	{
+		unsigned long upperLineStart = i * bytesPerLine;
+		unsigned long lowerLineStart = (m_Height - 1 - i) * bytesPerLine;
+		// Swap
+		memmove((void*)line, (void*)(m_Data + upperLineStart), bytesPerLine);
+		memmove((void*)(m_Data + upperLineStart), (void*)(m_Data + lowerLineStart), bytesPerLine);
+		memmove((void*)(m_Data + lowerLineStart), (void*)line, bytesPerLine);
+	}
+
+	delete[] line;
+	return true;
+}
+
+bool TGAImage::FlipHorizontal()
+{
+	if (!m_Data)
+		return false;
+
+	uint16_t halfWidth = m_Width >> 1;
+	for (uint16_t i = 0; i < halfWidth; i++)
+	{
+		for (uint16_t j = 0; j < m_Height; j++)
+		{
+			TGAColor c1 = GetPixel(i, j);
+			TGAColor c2 = GetPixel(m_Width - 1 - i, j);
+			SetPixel(i, j, c2);
+			SetPixel(m_Width - 1 - i, j, c1);
+		}
+	}
 }
 
