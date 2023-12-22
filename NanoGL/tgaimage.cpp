@@ -138,7 +138,7 @@ bool TGAImage::SetPixel(int x, int y, const TGAColor& c)
 	if (x < 0 || y < 0 || x >= m_Width || y >= m_Height)
 		return false;
 	
-	memcpy(m_Data + (x + y * m_Width) * m_BytesPerPixel, c.DataBGRA, m_BytesPerPixel);
+	memcpy(m_Data + (x + y * m_Width) * m_BytesPerPixel, c.Raw, m_BytesPerPixel);
 	return true;
 }
 

@@ -25,29 +25,30 @@ struct TGAHeader
 
 struct TGAColor
 {
-	uint8_t R, G, B, A;
-	uint8_t DataBGRA[4];
+	union
+	{
+		struct
+		{
+			uint8_t B, G, R, A;
+		};
+		uint8_t Raw[4];
+		uint32_t Val;
+	};
 
 	TGAColor()
-		: R(0), G(0), B(0), A(0), DataBGRA{ 0,0,0,0 }
+		: Val(0)
 	{}
 
 	TGAColor(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
-		: R(r), G(g), B(b), A(a), DataBGRA{ b,g,r,a }
+		: R(r), G(g), B(b), A(a)
 	{}
 
-	TGAColor(const uint8_t* bgraData, uint8_t bytesPerPixel)
+	TGAColor(const uint8_t* bgraData, uint8_t bytesPerPixel) : Val(0)
 	{
-		memset(DataBGRA, 0, sizeof(DataBGRA));
 		for (uint8_t i = 0; i < bytesPerPixel; i++)
 		{
-			DataBGRA[i] = bgraData[i];
+			Raw[i] = bgraData[i];
 		}
-
-		B = DataBGRA[0];
-		G = DataBGRA[1];
-		R = DataBGRA[2];
-		A = DataBGRA[3];
 	}
 };
 
