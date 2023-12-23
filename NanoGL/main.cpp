@@ -49,31 +49,41 @@ void Line(Vec2i v1, Vec2i v2, TGAImage& image, const TGAColor& color)
 	Line(v1.x, v1.y, v2.x, v2.y, image, color);
 }
 
-void Triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage& image, const TGAColor& color)
+Vec3f Barycentric(Vec2i* pts, Vec2i P) 
 {
-	Vec2i t[3] = { t0, t1, t2 };
-	std::sort(std::begin(t), std::end(t), [](const Vec2i& a, const Vec2i& b) {return a.y < b.y; });
+	Vec3f u = Vec3f(pts[2][0] - pts[0][0], pts[1][0] - pts[0][0], pts[0][0] - P[0]) ^ Vec3f(pts[2][1] - pts[0][1], pts[1][1] - pts[0][1], pts[0][1] - P[1]);
+	/* `pts` and `P` has integer value as coordinates
+	   so `abs(u[2])` < 1 means `u[2]` is 0, that means
+	   triangle is degenerate, in this case return something with negative coordinates */
+	if (std::abs(u.z) < 1) return Vec3f(-1, 1, 1);
+	return Vec3f(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
+}
 
-	int totalHeight = t[2].y - t[0].y;
-	for (int y = 0; y <= totalHeight; y++)
+void Triangle(Vec2i* pts, TGAImage& image, const TGAColor& color)
+{
+	Vec2i bboxmin(image.GetWidth() - 1, image.GetHeight() - 1);
+	Vec2i bboxmax(0, 0);
+	Vec2i clamp(image.GetWidth() - 1, image.GetHeight() - 1);
+
+	for (int i = 0; i < 3; i++)
 	{
-		bool isLowerHalf = y >= t[1].y - t[0].y;
+		bboxmin.x = std::max(0, std::min(bboxmin.x, pts[i].x));
+		bboxmin.y = std::max(0, std::min(bboxmin.y, pts[i].y));
 
-		Vec2i A = t[0] + (t[2] - t[0]) * (float)y / totalHeight; // Longest line
-		Vec2i dh = isLowerHalf ? t[2] - t[1] : t[1] - t[0];
-		Vec2i B = (isLowerHalf ? t[1] : t[0]) + dh * (float) (isLowerHalf ? y - (t[1].y - t[0].y) : y) / dh.y;
-		
-		// Line(A, B, image, color);
-		if (A.x > B.x) std::swap(A, B);
-		for (int x = A.x; x <= B.x; x++)
-		{
-			image.SetPixel(x, t[0].y + y, color);
-		}
+		bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, pts[i].x));
+		bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, pts[i].y));
 	}
 
-	//Line(t[0], t[1], image, green);
-	//Line(t[1], t[2], image, green);
-	//Line(t[2], t[0], image, red);
+	Vec2i P;
+	for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
+	{
+		for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
+		{
+			Vec3f bcScreen = Barycentric(pts, P);
+			if (bcScreen.x < 0 || bcScreen.y < 0 || bcScreen.z < 0) continue;
+			image.SetPixel(P.x, P.y, color);
+		}
+	}
 }
 
 void DrawModelWire()
@@ -103,20 +113,41 @@ void DrawModelWire()
 	image.WriteTGAImage("resultsTGA/model_wire.tga");
 }
 
+void DrawSimpleShading()
+{
+	const int width = 800;
+	const int height = 800;
+
+	Model model("obj/african_head.obj");
+	TGAImage image(width, height, 3);
+
+	Vec3f lightDir(0, 0, -1);
+
+	for (int i = 0; i < model.nFaces(); i++)
+	{
+		std::vector<int> face = model.GetFace(i);
+		Vec2i screenCoords[3];
+		Vec3f worldCoords[3];
+		for (int j = 0; j < 3; j++)
+		{
+			worldCoords[j] = model.GetVert(face[j]);
+			screenCoords[j] = Vec2i((worldCoords[j].x + 1.0f) * width / 2.0f, (worldCoords[j].y + 1.0f) * height / 2.0f);
+		}
+
+		Vec3f normal = (worldCoords[2] - worldCoords[0]) ^ (worldCoords[1] - worldCoords[0]);
+		normal.Normalize();
+		float intensity = normal * lightDir;
+		if (intensity > 0)
+			Triangle(screenCoords, image, TGAColor(intensity * 255, intensity * 255, intensity * 255));
+	}
+
+	image.FlipVertical();
+	image.WriteTGAImage("resultsTGA/simple_shading.tga");
+}
+
 int main()
 {
-	TGAImage image(200, 200, 3);
-
-	Vec2i t0[3] = { Vec2i(10, 70),   Vec2i(50, 160),  Vec2i(70, 80) };
-	Vec2i t1[3] = { Vec2i(180, 50),  Vec2i(150, 1),   Vec2i(70, 180) };
-	Vec2i t2[3] = { Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180) };
-
-	Triangle(t0[0], t0[1], t0[2], image, red);
-	Triangle(t1[0], t1[1], t1[2], image, white);
-	Triangle(t2[0], t2[1], t2[2], image, green);
-	
-	image.FlipVertical();
-	image.WriteTGAImage("resultsTGA/triangles.tga");
+	DrawSimpleShading();
 
 	return 0;
 }
