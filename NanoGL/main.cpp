@@ -10,7 +10,6 @@
 const int width = 800;
 const int height = 800;
 
-
 const TGAColor white(255, 255, 255, 255);
 const TGAColor red(255, 0, 0, 255);
 const TGAColor green(0, 255, 0, 255);
@@ -104,31 +103,47 @@ void Triangle(Vec3f* pts, float *zbuffer, TGAImage& image, const TGAColor& color
 	}
 }
 
-Vec3f World2Screen(const Vec3f& v)
+void Triangle(Vec3f* pts, float* zbuffer, TGAImage& image, Vec2f* texCoords, const TGAImage& texture, float intensity = 1.0f)
 {
-	return Vec3f(int((v.x + 1.0f) * width * 0.5f + 0.5f), int((v.y + 1.0f) * height * 0.5f + 0.5f), v.z);
-}
+	Vec2f bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+	Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+	Vec2f clamp(image.GetWidth() - 1, image.GetHeight() - 1);
 
-void Rasterize(Vec2i p0, Vec2i p1, TGAImage& image, const TGAColor& color, int ybuffer[])
-{
-	if (p0.x > p1.x)
+	for (int i = 0; i < 3; i++)
 	{
-		std::swap(p0, p1);
+		for (int j = 0; j < 2; j++)
+		{
+			bboxmin[j] = std::max(0.0f, std::min(bboxmin[j], pts[i][j]));
+			bboxmax[j] = std::min(clamp[j], std::max(bboxmax[j], pts[i][j]));
+		}
 	}
 
-	for (int x = p0.x; x <= p1.x; x++)
+	Vec3f P;
+	for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
 	{
-		float t = (x - p0.x) / (float)(p1.x - p0.x);
-		int y = p0.y * (1.0f - t) + p1.y * t;
-		if (ybuffer[x] < y)
+		for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
 		{
-			ybuffer[x] = y;
-			for (int k = 0; k < 16; k++)
+			Vec3f bcScreen = Barycentric(pts[0], pts[1], pts[2], P);
+			if (bcScreen.x < 0 || bcScreen.y < 0 || bcScreen.z < 0) continue;
+			P.z = 0;
+			for (int i = 0; i < 3; i++) P.z += pts[i][2] * bcScreen[i];
+			if (zbuffer[int(P.x + P.y * width)] < P.z)
 			{
-				image.SetPixel(x, k, color);
+				zbuffer[int(P.x + P.y * width)] = P.z;
+				// Color calculations
+				float u = bcScreen[0] * texCoords[0][0] + bcScreen[1] * texCoords[1][0] + bcScreen[2] * texCoords[2][0];
+				float v = bcScreen[0] * texCoords[0][1] + bcScreen[1] * texCoords[1][1] + bcScreen[2] * texCoords[2][1];
+				TGAColor color = texture.GetPixel(int(u * texture.GetWidth()), int(v * texture.GetHeight()));
+				color.R *= intensity; color.G *= intensity; color.B *= intensity;
+				image.SetPixel(P.x, P.y, color);
 			}
 		}
 	}
+}
+
+Vec3f World2Screen(const Vec3f& v)
+{
+	return Vec3f(int((v.x + 1.0f) * width * 0.5f + 0.5f), int((v.y + 1.0f) * height * 0.5f + 0.5f), v.z);
 }
 
 void DrawModelWire()
@@ -136,7 +151,7 @@ void DrawModelWire()
 	const int width = 800;
 	const int height = 800;
 
-	Model model("obj/african_head.obj");
+	Model model("obj/african_head.obj", "obj/african_head_diffuse.tga");
 	TGAImage image(width, height, 3);
 
 	for (int i = 0; i < model.nFaces(); i++)
@@ -160,7 +175,7 @@ void DrawModelWire()
 
 void DrawSimpleShading()
 {
-	Model model("obj/african_head.obj");
+	Model model("obj/african_head.obj", "obj/african_head_diffuse.tga");
 	TGAImage image(width, height, 3);
 
 	float* zbuffer = new float[width * height];
@@ -189,9 +204,46 @@ void DrawSimpleShading()
 	image.WriteTGAImage("resultsTGA/simple_shading.tga");
 }
 
+void DrawModelDiffuse()
+{
+	Model model("obj/african_head.obj", "obj/african_head_diffuse.tga");
+	TGAImage image(width, height, 3);
+
+	float* zbuffer = new float[width * height];
+	for (int i = width * height; i--; zbuffer[i] = -std::numeric_limits<float>::max());
+
+	Vec3f lightDir(0, 0, -1);
+
+	for (int i = 0; i < model.nFaces(); i++)
+	{
+		std::vector<int> face = model.GetFace(i);
+		std::vector<int> texCoordIdxs = model.GetTexCoordIdx(i);
+		Vec3f pts[3];
+		Vec3f worldCoords[3];
+		Vec2f texCoords[3];
+		for (int j = 0; j < 3; j++)
+		{
+			worldCoords[j] = model.GetVert(face[j]);
+			texCoords[j] = model.GetTexCoord(texCoordIdxs[j]);
+			pts[j] = World2Screen(model.GetVert(face[j]));
+		}
+
+		Vec3f n = (worldCoords[2] - worldCoords[0]) ^ (worldCoords[1] - worldCoords[0]);
+		n.Normalize();
+		float intensity = n * lightDir;
+		if (intensity > 0)
+		{
+			Triangle(pts, zbuffer, image, texCoords, model.GetDiffuseTexture(), intensity);
+		}
+	}
+
+	image.FlipVertical();
+	image.WriteTGAImage("resultsTGA/model_diffuse.tga");
+}
+
 int main()
 {
-	DrawSimpleShading();
+	DrawModelDiffuse();
 
 	return 0;
 }

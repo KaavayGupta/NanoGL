@@ -63,7 +63,7 @@ public:
 	bool ReadTGAImage(const char* filename);
 	bool WriteTGAImage(const char* filename);
 
-	TGAColor GetPixel(int x, int y);
+	TGAColor GetPixel(int x, int y) const;
 	bool SetPixel(int x, int y, const TGAColor& c);
 
 	uint16_t GetWidth() const { return m_Width; }

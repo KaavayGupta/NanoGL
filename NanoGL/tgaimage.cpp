@@ -130,7 +130,7 @@ bool TGAImage::WriteTGAImage(const char* filename)
 	return true;
 }
 
-TGAColor TGAImage::GetPixel(int x, int y)
+TGAColor TGAImage::GetPixel(int x, int y) const
 {
 	if (!m_Data || x < 0 || y < 0 || x >= m_Width || y >= m_Height)
 		return TGAColor();
