@@ -1,7 +1,6 @@
 #include "tgaimage.h"
 
 #include <iostream>
-#include <fstream>
 #include <cstring>
 
 TGAImage::~TGAImage()
@@ -65,6 +64,15 @@ bool TGAImage::ReadTGAImage(const char* filename)
 		if (!in.good())
 		{
 			std::cerr << "Unable to read TGA Data\n";
+			in.close();
+			return false;
+		}
+	}
+	if (header.ImageType == 10 || header.ImageDescriptor == 11) // RLE Data
+	{
+		if (!LoadRLEData(in))
+		{
+			std::cerr << "Unable to read TGA RLE Data\n";
 			in.close();
 			return false;
 		}
@@ -180,5 +188,56 @@ bool TGAImage::FlipHorizontal()
 			SetPixel(m_Width - 1 - i, j, c1);
 		}
 	}
+}
+
+bool TGAImage::LoadRLEData(std::ifstream& in)
+{
+	uint64_t pixelCount = m_Width * m_Height;
+	uint64_t index = 0;
+	TGAColor colorBuffer;
+	
+	while (index < pixelCount)
+	{
+		uint8_t packetHeader = 0;
+		packetHeader = in.get();
+		if (!in.good())
+		{
+			std::cerr << "An errror occured while reading the data\n";
+			return false;
+		}
+
+		if (packetHeader < 128) // Raw
+		{
+			for (int i = 0; i < packetHeader + 1; i++)
+			{
+				in.read((char*)colorBuffer.Raw, m_BytesPerPixel);
+				if (!in.good())
+				{
+					std::cerr << "An errror occured while reading the header\n";
+					return false;
+				}
+				for (int t = 0; t < m_BytesPerPixel; t++) m_Data[index * m_BytesPerPixel + t] = colorBuffer.Raw[t];
+				index++;
+			}
+		}
+		else // RLE
+		{
+			in.read((char*)colorBuffer.Raw, m_BytesPerPixel);
+
+			if (!in.good())
+			{
+				std::cerr << "An errror occured while reading the header\n";
+				return false;
+			}
+			for (int i = 0; i < packetHeader - 127; i++)
+			{
+				for (int t = 0; t < m_BytesPerPixel; t++)
+					m_Data[index*m_BytesPerPixel + t] = colorBuffer.Raw[t];
+				index++;
+			}
+		}
+	}
+
+	return true;
 }
 

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <fstream>
 
 #pragma pack(push, 1)
 struct TGAHeader
@@ -72,6 +73,8 @@ public:
 
 	bool FlipVertical();
 	bool FlipHorizontal();
+private:
+	bool LoadRLEData(std::ifstream& in);
 private:
 	uint16_t m_Width = 0, m_Height = 0;
 	uint8_t m_BytesPerPixel = 0;
