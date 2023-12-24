@@ -3,6 +3,13 @@
 
 #include <iostream>
 #include <algorithm>
+#include <limits>
+#include <cmath>
+#include <cstdlib>
+
+const int width = 800;
+const int height = 800;
+
 
 const TGAColor white(255, 255, 255, 255);
 const TGAColor red(255, 0, 0, 255);
@@ -49,39 +56,77 @@ void Line(Vec2i v1, Vec2i v2, TGAImage& image, const TGAColor& color)
 	Line(v1.x, v1.y, v2.x, v2.y, image, color);
 }
 
-Vec3f Barycentric(Vec2i* pts, Vec2i P) 
+Vec3f Barycentric(const Vec3f& A, const Vec3f& B, const Vec3f& C, const Vec3f& P)
 {
-	Vec3f u = Vec3f(pts[2][0] - pts[0][0], pts[1][0] - pts[0][0], pts[0][0] - P[0]) ^ Vec3f(pts[2][1] - pts[0][1], pts[1][1] - pts[0][1], pts[0][1] - P[1]);
-	/* `pts` and `P` has integer value as coordinates
-	   so `abs(u[2])` < 1 means `u[2]` is 0, that means
-	   triangle is degenerate, in this case return something with negative coordinates */
-	if (std::abs(u.z) < 1) return Vec3f(-1, 1, 1);
-	return Vec3f(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
+	Vec3f s[2];
+	for (int i = 2; i--;) {
+		s[i][0] = C[i] - A[i];
+		s[i][1] = B[i] - A[i];
+		s[i][2] = A[i] - P[i];
+	}
+
+	Vec3f u = s[0] ^ s[1];
+	if (std::abs(u[2]) > 1e-2)
+		return Vec3f(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
+	return Vec3f(-1, 1, 1); // in this case generate negative coordinates, it will be thrown away by the rasterizator
 }
 
-void Triangle(Vec2i* pts, TGAImage& image, const TGAColor& color)
+void Triangle(Vec3f* pts, float *zbuffer, TGAImage& image, const TGAColor& color)
 {
-	Vec2i bboxmin(image.GetWidth() - 1, image.GetHeight() - 1);
-	Vec2i bboxmax(0, 0);
-	Vec2i clamp(image.GetWidth() - 1, image.GetHeight() - 1);
+	Vec2f bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+	Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+	Vec2f clamp(image.GetWidth() - 1, image.GetHeight() - 1);
 
 	for (int i = 0; i < 3; i++)
 	{
-		bboxmin.x = std::max(0, std::min(bboxmin.x, pts[i].x));
-		bboxmin.y = std::max(0, std::min(bboxmin.y, pts[i].y));
-
-		bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, pts[i].x));
-		bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, pts[i].y));
+		for (int j = 0; j < 2; j++)
+		{
+			bboxmin[j] = std::max(0.0f, std::min(bboxmin[j], pts[i][j]));
+			bboxmax[j] = std::min(clamp[j], std::max(bboxmax[j], pts[i][j]));
+		}
 	}
 
-	Vec2i P;
+	Vec3f P;
 	for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
 	{
 		for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
 		{
-			Vec3f bcScreen = Barycentric(pts, P);
+			Vec3f bcScreen = Barycentric(pts[0], pts[1], pts[2], P);
 			if (bcScreen.x < 0 || bcScreen.y < 0 || bcScreen.z < 0) continue;
-			image.SetPixel(P.x, P.y, color);
+			P.z = 0;
+			for (int i = 0; i < 3; i++) P.z += pts[i][2] * bcScreen[i];
+			if (zbuffer[int(P.x + P.y * width)] < P.z)
+			{
+				zbuffer[int(P.x + P.y * width)] = P.z;
+				image.SetPixel(P.x, P.y, color);
+			}
+		}
+	}
+}
+
+Vec3f World2Screen(const Vec3f& v)
+{
+	return Vec3f(int((v.x + 1.0f) * width * 0.5f + 0.5f), int((v.y + 1.0f) * height * 0.5f + 0.5f), v.z);
+}
+
+void Rasterize(Vec2i p0, Vec2i p1, TGAImage& image, const TGAColor& color, int ybuffer[])
+{
+	if (p0.x > p1.x)
+	{
+		std::swap(p0, p1);
+	}
+
+	for (int x = p0.x; x <= p1.x; x++)
+	{
+		float t = (x - p0.x) / (float)(p1.x - p0.x);
+		int y = p0.y * (1.0f - t) + p1.y * t;
+		if (ybuffer[x] < y)
+		{
+			ybuffer[x] = y;
+			for (int k = 0; k < 16; k++)
+			{
+				image.SetPixel(x, k, color);
+			}
 		}
 	}
 }
@@ -115,30 +160,29 @@ void DrawModelWire()
 
 void DrawSimpleShading()
 {
-	const int width = 800;
-	const int height = 800;
-
 	Model model("obj/african_head.obj");
 	TGAImage image(width, height, 3);
 
+	float* zbuffer = new float[width * height];
+	for (int i = width * height; i--; zbuffer[i] = -std::numeric_limits<float>::max());
+
 	Vec3f lightDir(0, 0, -1);
 
-	for (int i = 0; i < model.nFaces(); i++)
+	for (int i = 0; i < model.nFaces(); i++) 
 	{
 		std::vector<int> face = model.GetFace(i);
-		Vec2i screenCoords[3];
+		Vec3f pts[3];
 		Vec3f worldCoords[3];
-		for (int j = 0; j < 3; j++)
+		for (int j = 0; j < 3; j++) 
 		{
 			worldCoords[j] = model.GetVert(face[j]);
-			screenCoords[j] = Vec2i((worldCoords[j].x + 1.0f) * width / 2.0f, (worldCoords[j].y + 1.0f) * height / 2.0f);
+			pts[j] = World2Screen(model.GetVert(face[j]));
 		}
-
-		Vec3f normal = (worldCoords[2] - worldCoords[0]) ^ (worldCoords[1] - worldCoords[0]);
-		normal.Normalize();
-		float intensity = normal * lightDir;
+		Vec3f n = (worldCoords[2] - worldCoords[0]) ^ (worldCoords[1] - worldCoords[0]);
+		n.Normalize();
+		float intensity = n * lightDir;
 		if (intensity > 0)
-			Triangle(screenCoords, image, TGAColor(intensity * 255, intensity * 255, intensity * 255));
+			Triangle(pts, zbuffer, image, TGAColor(intensity * 255, intensity * 255, intensity * 255, 255));
 	}
 
 	image.FlipVertical();
