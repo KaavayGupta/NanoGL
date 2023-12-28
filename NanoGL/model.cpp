@@ -5,7 +5,7 @@
 #include <sstream>
 #include <string>
 
-Model::Model(const char* filename, const char* diffuseMapFile, const char* normalMapFile)
+Model::Model(const char* filename, const char* diffuseMapFile, const char* normalMapFile, const char* specularMapFile)
 {
 	std::ifstream in;
 	in.open(filename, std::ifstream::in);
@@ -62,6 +62,9 @@ Model::Model(const char* filename, const char* diffuseMapFile, const char* norma
 		}
 	}
 
+	in.close();
+	std::clog << "#" << filename << " v#" << m_Verts.size() << " f# " << m_Faces.size() << " vt#" << m_UVs.size() << " vn#" << m_Norms.size() << std::endl;
+
 	if (diffuseMapFile)
 	{
 		if (!m_DiffuseMap.ReadTGAImage(diffuseMapFile))
@@ -78,8 +81,13 @@ Model::Model(const char* filename, const char* diffuseMapFile, const char* norma
 		}
 	}
 
-	in.close();
-	std::clog << "#" << filename << " v#" << m_Verts.size() << " f# " << m_Faces.size() << " vt#" << m_UVs.size() << " vn#" << m_Norms.size() << std::endl;
+	if (specularMapFile)
+	{
+		if (!m_SpecularMap.ReadTGAImage(specularMapFile))
+		{
+			std::cerr << "Could not read specular map " << specularMapFile;
+		}
+	}
 }
 
 Model::~Model()
@@ -156,5 +164,11 @@ Vec3f Model::SampleNormalMap(Vec2f uvf)
 	for (int i = 0; i < 3; i++)
 		res[2 - i] = (float)c.Raw[i] / 255.0f * 2.0f - 1.0f;
 	return res;
+}
+
+float Model::SampleSpecularMap(Vec2f uvf)
+{
+	Vec2i uv(uvf[0] * m_NormalMap.GetWidth(), uvf[1] * m_NormalMap.GetHeight());
+	return (float)m_NormalMap.GetPixel(uv[0], uv[1]).Raw[0];
 }
 

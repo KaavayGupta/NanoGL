@@ -80,15 +80,19 @@ struct Shader : public IShader
 		Vec2f uv = varyingUV * bar;
 		Vec3f n = Proj<3>(uniformMIT * Embed<4>(model->SampleNormalMap(uv))).Normalize();
 		Vec3f l = Proj<3>(uniformM * Embed<4>(lightDir)).Normalize();
-		float intensity = std::max(0.0f, n * l);
-		color = model->SampleDiffuseMap(uv) * intensity;
+		Vec3f r = (n * (n * l * 2.0f) - l).Normalize();	// Reflected ray
+		float spec = pow(std::max(r.z, 0.0f), model->SampleSpecularMap(uv));
+		float diff = std::max(0.0f, n * l);
+		TGAColor c = model->SampleDiffuseMap(uv);
+		color = c;
+		for (int i = 0; i < 3; i++) color.Raw[i] = std::min<float>(5 + c.Raw[i] * (diff + 0.8 * spec), 255);	// Phongs Approx: Weighted sum of ambient, diffuse and specular
 		return false;
 	}
 };
 
 int main()
 {
-	model = new Model("obj/african_head.obj", "obj/african_head_diffuse.tga", "obj/african_head_nm.tga");
+	model = new Model("obj/african_head.obj", "obj/african_head_diffuse.tga", "obj/african_head_nm.tga", "obj/african_head_spec.tga");
 
 	LookAt(eye, center, up);
 	CreateViewportMatrix(width / 8, height / 8, width * 3 / 4, height * 3 / 4);

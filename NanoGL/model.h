@@ -8,7 +8,7 @@
 class Model
 {
 public:
-	Model(const char* filename, const char* diffuseMapFile, const char* normalMapFile);
+	Model(const char* filename, const char* diffuseMapFile, const char* normalMapFile, const char* specularMapFile);
 	~Model();
 	
 	int nVerts();
@@ -25,11 +25,13 @@ public:
 
 	TGAColor SampleDiffuseMap(Vec2f uvf);
 	Vec3f SampleNormalMap(Vec2f uvf);
+	float SampleSpecularMap(Vec2f uvf);
 
 	const TGAImage& GetDiffuseTexture() const { return m_DiffuseMap; }
 private:
 	TGAImage m_DiffuseMap;
 	TGAImage m_NormalMap;
+	TGAImage m_SpecularMap;
 
 	std::vector<std::vector<Vec3i>> m_Faces; // Vec3i --> vertex/uv/normal
 	std::vector<Vec3f> m_Verts;
