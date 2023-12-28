@@ -32,8 +32,8 @@ Model::Model(const char* filename, const char* textureFile)
 		}
 		else if (prefix == "vt")
 		{
-			Vec2f vt;
-			for (int i = 0; i < 2; i++) { iss >> vt[i]; }
+			Vec3f vt;
+			for (int i = 0; i < 3; i++) { iss >> vt[i]; }
 			m_UVs.push_back(vt);
 			iss >> trash;
 		}
@@ -119,12 +119,12 @@ std::vector<int> Model::GetFace(int idx)
 	return face;
 }
 
-Vec2f Model::GetUV(int i)
+Vec3f Model::GetUV(int i)
 {
 	return m_UVs[i];
 }
 
-Vec2f Model::GetUV(int iFace, int nthVertex)
+Vec3f Model::GetUV(int iFace, int nthVertex)
 {
 	return m_UVs[m_Faces[iFace][nthVertex][1]];
 }
