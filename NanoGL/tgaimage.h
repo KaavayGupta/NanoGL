@@ -54,6 +54,17 @@ struct TGAColor
 			Raw[i] = bgraData[i];
 		}
 	}
+
+	TGAColor operator*(float f)
+	{
+		TGAColor res = *this;
+		f = std::max(0.0f, std::min(1.0f, f));
+		for (int i = 0; i < 4; i++)
+		{
+			res.Raw[i] = f * Raw[i];
+		}
+		return res;
+	}
 };
 
 class TGAImage

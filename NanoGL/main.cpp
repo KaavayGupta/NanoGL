@@ -62,9 +62,31 @@ struct GourardShader2 : public IShader
 	}
 };
 
+struct Shader : public IShader
+{
+	Vec3f varyingIntensity;
+	Mat<2, 3, float> varyingUV;
+
+	virtual Vec4f Vertex(int iface, int nthvert)
+	{
+		varyingUV.SetCol(nthvert, model->GetUV(iface, nthvert));
+		varyingIntensity[nthvert] = std::max(0.0f, model->GetNormal(iface, nthvert) * lightDir);
+		Vec4f gl_Vertex = Embed<4>(model->GetVert(iface, nthvert));
+		return Viewport * Projection * ModelView * gl_Vertex;
+	}
+
+	virtual bool Fragment(Vec3f bar, TGAColor& color)
+	{
+		float intensity = varyingIntensity * bar;
+		Vec2f uv = varyingUV * bar;
+		color = model->SampleDiffuseMap(uv) * intensity;
+		return false;
+	}
+};
+
 int main()
 {
-	model = new Model("obj/african_head.obj", "obj/african_head_diffuse.tga");
+	model = new Model("obj/african_head.obj", "obj/african_head_diffuse.tga", nullptr);
 
 	LookAt(eye, center, up);
 	CreateViewportMatrix(width / 8, height / 8, width * 3 / 4, height * 3 / 4);
@@ -74,7 +96,7 @@ int main()
 	TGAImage image(width, height, 3);
 	TGAImage zbuffer(width, height, 1);
 
-	GourardShader2 shader;
+	Shader shader;
 	for (int i = 0; i < model->nFaces(); i++)
 	{
 		Vec4f screenCoords[3];
@@ -87,8 +109,8 @@ int main()
 
 	image.FlipVertical();
 	zbuffer.FlipVertical();
-	image.WriteTGAImage("resultsTGA/gourard_shader2.tga");
-	zbuffer.WriteTGAImage("resultsTGA/gourard_shader_zbuf.tga");
+	image.WriteTGAImage("resultsTGA/simple_shader.tga");
+	zbuffer.WriteTGAImage("resultsTGA/simple_shader_zbuf.tga");
 
 	delete model;
 	return 0;

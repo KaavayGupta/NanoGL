@@ -141,7 +141,7 @@ struct DT<1, T>
 
 //---------------------------------------------------------------------------------------------------------------------
 
-template<size_t DimCols, size_t DimRows, typename T>
+template<size_t DimRows, size_t DimCols, typename T>
 class Mat 
 {
 public:
@@ -224,7 +224,12 @@ template<size_t DimRows, size_t DimCols, typename T>
 Vec<DimRows, T> operator*(const Mat<DimRows, DimCols, T>& lhs, const Vec<DimCols, T>& rhs) 
 {
 	Vec<DimRows, T> ret;
-	for (size_t i = DimRows; i--; ret[i] = lhs[i] * rhs);
+	for (size_t i = 0; i < DimRows; ++i) {
+		ret[i] = T();
+		for (size_t j = 0; j < DimCols; ++j) {
+			ret[i] += lhs[i][j] * rhs[j];
+		}
+	}
 	return ret;
 }
 
