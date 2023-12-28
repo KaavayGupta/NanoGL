@@ -5,7 +5,7 @@
 #include <sstream>
 #include <string>
 
-Model::Model(const char* filename, const char* textureFile)
+Model::Model(const char* filename, const char* diffuseMapFile, const char* normalMapFile)
 {
 	std::ifstream in;
 	in.open(filename, std::ifstream::in);
@@ -32,8 +32,8 @@ Model::Model(const char* filename, const char* textureFile)
 		}
 		else if (prefix == "vt")
 		{
-			Vec3f vt;
-			for (int i = 0; i < 3; i++) { iss >> vt[i]; }
+			Vec2f vt;
+			for (int i = 0; i < 2; i++) { iss >> vt[i]; }
 			m_UVs.push_back(vt);
 			iss >> trash;
 		}
@@ -62,12 +62,19 @@ Model::Model(const char* filename, const char* textureFile)
 		}
 	}
 
-	if (textureFile)
+	if (diffuseMapFile)
 	{
-		if (!m_DiffuseMap.ReadTGAImage(textureFile))
+		if (!m_DiffuseMap.ReadTGAImage(diffuseMapFile))
 		{
-			in.close();
-			std::cerr << "Could not read texture " << textureFile;
+			std::cerr << "Could not read diffuse map " << diffuseMapFile;
+		}
+	}
+
+	if (normalMapFile)
+	{
+		if (!m_NormalMap.ReadTGAImage(normalMapFile))
+		{
+			std::cerr << "Could not read normal map " << normalMapFile;
 		}
 	}
 
@@ -119,12 +126,12 @@ std::vector<int> Model::GetFace(int idx)
 	return face;
 }
 
-Vec3f Model::GetUV(int i)
+Vec2f Model::GetUV(int i)
 {
 	return m_UVs[i];
 }
 
-Vec3f Model::GetUV(int iFace, int nthVertex)
+Vec2f Model::GetUV(int iFace, int nthVertex)
 {
 	return m_UVs[m_Faces[iFace][nthVertex][1]];
 }
@@ -139,5 +146,15 @@ TGAColor Model::SampleDiffuseMap(Vec2f uvf)
 {
 	Vec2i uv(uvf[0] * m_DiffuseMap.GetWidth(), uvf[1] * m_DiffuseMap.GetHeight());
 	return m_DiffuseMap.GetPixel(uv[0], uv[1]);
+}
+
+Vec3f Model::SampleNormalMap(Vec2f uvf)
+{
+	Vec2i uv(uvf[0] * m_NormalMap.GetWidth(), uvf[1] * m_NormalMap.GetHeight());
+	TGAColor c = m_NormalMap.GetPixel(uv[0], uv[1]);
+	Vec3f res;
+	for (int i = 0; i < 3; i++)
+		res[2 - i] = (float)c.Raw[i] / 255.0f * 2.0f - 1.0f;
+	return res;
 }
 
