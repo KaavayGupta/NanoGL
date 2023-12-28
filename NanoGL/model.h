@@ -13,20 +13,24 @@ public:
 	
 	int nVerts();
 	int nFaces();
-	int nTexCoords();
-	int nTexCoordIdx();
+	int nUVs();
+	int nNorms();
 	
-	Vec3f GetVert(int i);
 	std::vector<int> GetFace(int idx);
-	Vec2f GetTexCoord(int i);
-	std::vector<int> GetTexCoordIdx(int faceIdx);
+	Vec3f GetVert(int i);
+	Vec3f GetVert(int iFace, int nthVertex);
+	Vec2f GetUV(int i);
+	Vec2f GetUV(int iFace, int nthVertex);
+	Vec3f GetNormal(int iFace, int nthVertex, bool normalize = true);
 
-	const TGAImage& GetDiffuseTexture() const { return m_DiffuseTexture; }
+	TGAColor SampleDiffuseMap(Vec2f uvf);
+
+	const TGAImage& GetDiffuseTexture() const { return m_DiffuseMap; }
 private:
-	TGAImage m_DiffuseTexture;
+	TGAImage m_DiffuseMap;
 
+	std::vector<std::vector<Vec3i>> m_Faces; // Vec3i --> vertex/uv/normal
 	std::vector<Vec3f> m_Verts;
-	std::vector<std::vector<int>> m_Faces;
-	std::vector<Vec2f> m_TexCoords;
-	std::vector<std::vector<int>> m_TexCoordIdxs;
+	std::vector<Vec2f> m_UVs;
+	std::vector<Vec3f> m_Norms;
 };

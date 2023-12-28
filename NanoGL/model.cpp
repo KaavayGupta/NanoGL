@@ -34,27 +34,37 @@ Model::Model(const char* filename, const char* textureFile)
 		{
 			Vec2f vt;
 			for (int i = 0; i < 2; i++) { iss >> vt[i]; }
-			m_TexCoords.push_back(vt);
+			m_UVs.push_back(vt);
 			iss >> trash;
+		}
+		else if (prefix == "vn")
+		{
+			Vec3f n;
+			for (int i = 0; i < 3; i++) { iss >> n[i]; }
+			m_Norms.push_back(n);
 		}
 		else if (prefix == "f")
 		{
-			std::vector<int> f;
-			std::vector<int> t;
-			int itrash, itex, idx;
-			while (iss >> idx >> trash >> itex >> trash >> itrash)
+			std::vector<Vec3i> f;
+			Vec3f temp;
+			int idx, iuv, inorm;
+
+			while (iss >> idx >> trash >> iuv >> trash >> inorm)
 			{
-				f.push_back(idx - 1);	// obj indexes start from 1
-				t.push_back(itex - 1);
+				// obj indexes start from 1
+				temp[0] = idx - 1;
+				temp[1] = iuv - 1;
+				temp[2] = inorm - 1;
+				f.push_back(temp);
 			}
+
 			m_Faces.push_back(f);
-			m_TexCoordIdxs.push_back(t);
 		}
 	}
 
 	if (textureFile)
 	{
-		if (!m_DiffuseTexture.ReadTGAImage(textureFile))
+		if (!m_DiffuseMap.ReadTGAImage(textureFile))
 		{
 			in.close();
 			std::cerr << "Could not read texture " << textureFile;
@@ -62,7 +72,7 @@ Model::Model(const char* filename, const char* textureFile)
 	}
 
 	in.close();
-	std::clog << "#" << filename << " v#" << m_Verts.size() << " f# " << m_Faces.size() << " vt#" << m_TexCoords.size() << std::endl;
+	std::clog << "#" << filename << " v#" << m_Verts.size() << " f# " << m_Faces.size() << " vt#" << m_UVs.size() << " vn#" << m_Norms.size() << std::endl;
 }
 
 Model::~Model()
@@ -79,14 +89,14 @@ int Model::nFaces()
 	return (int)m_Faces.size();
 }
 
-int Model::nTexCoords()
+int Model::nUVs()
 {
-	return (int)m_TexCoords.size();
+	return (int)m_UVs.size();
 }
 
-int Model::nTexCoordIdx()
+int Model::nNorms()
 {
-	return (int)m_TexCoordIdxs.size();
+	return (int)m_Norms.size();
 }
 
 Vec3f Model::GetVert(int i)
@@ -94,17 +104,40 @@ Vec3f Model::GetVert(int i)
 	return m_Verts[i];
 }
 
+Vec3f Model::GetVert(int iFace, int nthVertex)
+{
+	return m_Verts[m_Faces[iFace][nthVertex][0]];
+}
+
 std::vector<int> Model::GetFace(int idx)
 {
-	return m_Faces[idx];
+	std::vector<int> face;
+	for (int i = 0; i < m_Faces[idx].size(); i++)
+	{
+		face.push_back(m_Faces[idx][i][0]);
+	}
+	return face;
 }
 
-Vec2f Model::GetTexCoord(int i)
+Vec2f Model::GetUV(int i)
 {
-	return m_TexCoords[i];
+	return m_UVs[i];
 }
 
-std::vector<int> Model::GetTexCoordIdx(int faceIdx)
+Vec2f Model::GetUV(int iFace, int nthVertex)
 {
-	return m_TexCoordIdxs[faceIdx];
+	return m_UVs[m_Faces[iFace][nthVertex][1]];
 }
+
+Vec3f Model::GetNormal(int iFace, int nthVertex, bool normalize)
+{
+	Vec3f n = m_Norms[m_Faces[iFace][nthVertex][2]];
+	return normalize ? n.Normalize() : n;
+}
+
+TGAColor Model::SampleDiffuseMap(Vec2f uvf)
+{
+	Vec2i uv(uvf[0] * m_DiffuseMap.GetWidth(), uvf[1] * m_DiffuseMap.GetHeight());
+	return m_DiffuseMap.GetPixel(uv[0], uv[1]);
+}
+
