@@ -64,7 +64,7 @@ Vec3f Barycentric(const Vec3f& A, const Vec3f& B, const Vec3f& C, const Vec3f& P
 		s[i][2] = A[i] - P[i];
 	}
 
-	Vec3f u = s[0] ^ s[1];
+	Vec3f u = Cross(s[0], s[1]);
 	if (std::abs(u[2]) > 1e-2)
 		return Vec3f(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
 	return Vec3f(-1, 1, 1); // in this case generate negative coordinates, it will be thrown away by the rasterizator
@@ -193,7 +193,7 @@ void DrawSimpleShading()
 			worldCoords[j] = model.GetVert(face[j]);
 			pts[j] = World2Screen(model.GetVert(face[j]));
 		}
-		Vec3f n = (worldCoords[2] - worldCoords[0]) ^ (worldCoords[1] - worldCoords[0]);
+		Vec3f n = Cross((worldCoords[2] - worldCoords[0]), (worldCoords[1] - worldCoords[0]));
 		n.Normalize();
 		float intensity = n * lightDir;
 		if (intensity > 0)
@@ -228,7 +228,7 @@ void DrawModelDiffuse()
 			pts[j] = World2Screen(model.GetVert(face[j]));
 		}
 
-		Vec3f n = (worldCoords[2] - worldCoords[0]) ^ (worldCoords[1] - worldCoords[0]);
+		Vec3f n = Cross((worldCoords[2] - worldCoords[0]), (worldCoords[1] - worldCoords[0]));
 		n.Normalize();
 		float intensity = n * lightDir;
 		if (intensity > 0)

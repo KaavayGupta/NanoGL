@@ -27,13 +27,13 @@ Model::Model(const char* filename, const char* textureFile)
 		if (prefix == "v")
 		{
 			Vec3f v;
-			for (int i = 0; i < 3; i++) { iss >> v.Raw[i]; }
+			for (int i = 0; i < 3; i++) { iss >> v[i]; }
 			m_Verts.push_back(v);
 		}
 		else if (prefix == "vt")
 		{
 			Vec2f vt;
-			for (int i = 0; i < 2; i++) { iss >> vt.Raw[i]; }
+			for (int i = 0; i < 2; i++) { iss >> vt[i]; }
 			m_TexCoords.push_back(vt);
 			iss >> trash;
 		}
