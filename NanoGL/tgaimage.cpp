@@ -68,7 +68,7 @@ bool TGAImage::ReadTGAImage(const char* filename)
 			return false;
 		}
 	}
-	if (header.ImageType == 10 || header.ImageDescriptor == 11) // RLE Data
+	if (header.ImageType == 10 || header.ImageType == 11) // RLE Data
 	{
 		if (!LoadRLEData(in))
 		{
