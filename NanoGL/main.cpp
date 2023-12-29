@@ -64,8 +64,16 @@ struct Shader : public IShader
 	}
 };
 
-int main()
+int main(int argc, char** argv)
 {
+	if (argc > 2)
+	{
+		std::cerr << "Usage: " << argv[0] << "[obj/model.obj]" << std::endl;
+	}
+
+	const char* modelFileName = argc == 2 ? argv[1] : "obj/african_head.obj";
+	std::clog << "Rendering default " << modelFileName << std::endl;
+
 	float* zbuffer = new float[width * height];
 	for (int i = width * height; i--; zbuffer[i] = -std::numeric_limits<float>::max());
 
@@ -75,7 +83,7 @@ int main()
 	CreateProjectionMatrix(-1.0f / (eye - center).Magnitude());
 	lightDir = Proj<3>((Projection * ModelView * Embed<4>(lightDir, 0.f))).Normalize();
 
-	model = new Model("obj/african_head.obj");
+	model = new Model(modelFileName);
 	Shader shader;
 	for (int i = 0; i < model->nFaces(); i++)
 	{
