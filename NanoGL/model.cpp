@@ -65,29 +65,22 @@ Model::Model(const char* filename, const char* diffuseMapFile, const char* norma
 	in.close();
 	std::clog << "#" << filename << " v#" << m_Verts.size() << " f# " << m_Faces.size() << " vt#" << m_UVs.size() << " vn#" << m_Norms.size() << std::endl;
 
+	// Load textures
 	if (diffuseMapFile)
-	{
-		if (!m_DiffuseMap.ReadTGAImage(diffuseMapFile))
-		{
-			std::cerr << "Could not read diffuse map " << diffuseMapFile;
-		}
-	}
+		LoadTexture(diffuseMapFile, m_DiffuseMap);
+	else
+		LoadTexture(filename, m_DiffuseMap, "_diffuse.tga");
 
 	if (normalMapFile)
-	{
-		if (!m_NormalMap.ReadTGAImage(normalMapFile))
-		{
-			std::cerr << "Could not read normal map " << normalMapFile;
-		}
-	}
+		LoadTexture(normalMapFile, m_NormalMap);
+	else
+		LoadTexture(filename, m_NormalMap, "_nm_tangent.tga");
 
-	if (specularMapFile)
-	{
-		if (!m_SpecularMap.ReadTGAImage(specularMapFile))
-		{
-			std::cerr << "Could not read specular map " << specularMapFile;
-		}
-	}
+	if (diffuseMapFile)
+		LoadTexture(diffuseMapFile, m_SpecularMap);
+	else
+		LoadTexture(filename, m_SpecularMap, "_spec.tga");
+	
 }
 
 Model::~Model()
@@ -170,5 +163,27 @@ float Model::SampleSpecularMap(Vec2f uvf)
 {
 	Vec2i uv(uvf[0] * m_NormalMap.GetWidth(), uvf[1] * m_NormalMap.GetHeight());
 	return (float)m_NormalMap.GetPixel(uv[0], uv[1]).Raw[0];
+}
+
+void Model::LoadTexture(std::string filename, TGAImage& img, const char* suffix)
+{
+	if (!suffix)
+	{
+		std::clog << "Texture file " << filename << " loading " << (img.ReadTGAImage(filename.c_str()) ? "OK" : "FAILED") << std::endl;
+		img.FlipVertical();
+		return;
+	}
+
+	std::string texfile(filename);
+	size_t dot = texfile.find_last_of(".");
+	if (dot != std::string::npos)
+	{
+		texfile = texfile.substr(0, dot) + std::string(suffix);
+		std::clog << "Texture file " << texfile << " loading " << (img.ReadTGAImage(texfile.c_str()) ? "OK" : "FAILED") << std::endl;
+	}
+	else
+	{
+		std::cerr << "Invalid suffix/filename name " << texfile << std::endl;
+	}
 }
 

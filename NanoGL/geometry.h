@@ -214,6 +214,19 @@ public:
 		return ret / tmp;
 	}
 
+
+	Mat<DimRows, DimCols, T> Invert()
+	{
+		return InvertTranspose().Transpose();
+	}
+
+	Mat<DimCols, DimRows, T> Transpose()
+	{
+		Mat<DimCols, DimRows, T> ret;
+		for (size_t i = DimCols; i--; ret[i] = this->Col(i));
+		return ret;
+	}
+
 private:
 	Vec<DimCols, T> m_Rows[DimRows];
 };

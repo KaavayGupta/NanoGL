@@ -15,111 +15,78 @@ Vec3f eye(1, 1, 3);
 Vec3f center(0, 0, 0);
 Vec3f up(0, 1, 0);
 
-struct GourardShader : public IShader
-{
-	Vec3f varyingIntensity; // written by vertex shader, read by fragment shader
-
-	virtual Vec4f Vertex(int iface, int nthvert) 
-	{
-		varyingIntensity[nthvert] = std::max(0.f, model->GetNormal(iface, nthvert) * lightDir); // get diffuse lighting intensity
-		Vec4f gl_Vertex = Embed<4>(model->GetVert(iface, nthvert)); // read the vertex from .obj file
-		return Viewport * Projection * ModelView * gl_Vertex; // transform it to screen coordinates
-	}
-
-	virtual bool Fragment(Vec3f bar, TGAColor& color) 
-	{
-		float intensity = varyingIntensity * bar;   // interpolate intensity for the current pixel
-		color = TGAColor(255, 255, 255);
-		color.R *= intensity; color.G *= intensity; color.B *= intensity;
-		return false;                              // no, we do not discard this pixel
-	}
-};
-
-struct GourardShader2 : public IShader
-{
-	Vec3f varyingIntensity; // written by vertex shader, read by fragment shader
-
-	virtual Vec4f Vertex(int iface, int nthvert) 
-	{
-		varyingIntensity[nthvert] = std::max(0.f, model->GetNormal(iface, nthvert) * lightDir); // get diffuse lighting intensity
-		Vec4f gl_Vertex = Embed<4>(model->GetVert(iface, nthvert)); // read the vertex from .obj file
-		return Viewport * Projection * ModelView * gl_Vertex; // transform it to screen coordinates
-	}
-
-	virtual bool Fragment(Vec3f bar, TGAColor& color) {
-		float intensity = varyingIntensity * bar;   // interpolate intensity for the current pixel
-		
-		if (intensity > .85) intensity = 1;
-		else if (intensity > .60) intensity = .80;
-		else if (intensity > .45) intensity = .60;
-		else if (intensity > .30) intensity = .45;
-		else if (intensity > .15) intensity = .30;
-		else intensity = 0;
-
-		color = TGAColor(50, 0, 255);
-		color.R *= intensity; color.G *= intensity; color.B *= intensity;
-		return false;                              // no, we do not discard this pixel
-	}
-};
-
 struct Shader : public IShader
 {
-	Mat<2, 3, float> varyingUV;
-	Mat<4, 4, float> uniformM;	// Projection * ModelView
-	Mat<4, 4, float> uniformMIT; // (Projection * ModelView).InvertTranspose()
+	Mat<2, 3, float> varyingUV;		// triangle uv coordinates
+	Mat<3, 3, float> varyingNorm;	// normal per vertex
+	Mat<4, 3, float> varyingTri;	// triangle coordinates
+	Mat<3, 3, float> ndcTri;		// triangle in normalised device coordinates
 
 	virtual Vec4f Vertex(int iface, int nthvert)
 	{
 		varyingUV.SetCol(nthvert, model->GetUV(iface, nthvert));
-		Vec4f gl_Vertex = Embed<4>(model->GetVert(iface, nthvert));
-		return Viewport * Projection * ModelView * gl_Vertex;
+		varyingNorm.SetCol(nthvert, Proj<3>((Projection * ModelView).InvertTranspose() * Embed<4>(model->GetNormal(iface, nthvert), 0.0f)));
+		Vec4f gl_Vertex = Projection * ModelView * Embed<4>(model->GetVert(iface, nthvert));
+		varyingTri.SetCol(nthvert, gl_Vertex);
+		ndcTri.SetCol(nthvert, Proj<3>(gl_Vertex / gl_Vertex[3]));
+		return gl_Vertex;
 	}
 
 	virtual bool Fragment(Vec3f bar, TGAColor& color)
 	{
+		Vec3f bn = (varyingNorm * bar).Normalize();
 		Vec2f uv = varyingUV * bar;
-		Vec3f n = Proj<3>(uniformMIT * Embed<4>(model->SampleNormalMap(uv))).Normalize();
-		Vec3f l = Proj<3>(uniformM * Embed<4>(lightDir)).Normalize();
-		Vec3f r = (n * (n * l * 2.0f) - l).Normalize();	// Reflected ray
-		float spec = pow(std::max(r.z, 0.0f), model->SampleSpecularMap(uv));
-		float diff = std::max(0.0f, n * l);
-		TGAColor c = model->SampleDiffuseMap(uv);
-		color = c;
-		for (int i = 0; i < 3; i++) color.Raw[i] = std::min<float>(5 + c.Raw[i] * (diff + 0.8 * spec), 255);	// Phongs Approx: Weighted sum of ambient, diffuse and specular
+
+		Mat<3, 3, float> A;
+		A[0] = ndcTri.Col(1) - ndcTri.Col(0);
+		A[1] = ndcTri.Col(2) - ndcTri.Col(0);
+		A[2] = bn;
+
+		Mat<3, 3, float> AI = A.Invert();
+
+		Vec3f i = AI * Vec3f(varyingUV[0][1] - varyingUV[0][0], varyingUV[0][2] - varyingUV[0][0], 0);
+		Vec3f j = AI * Vec3f(varyingUV[1][1] - varyingUV[1][0], varyingUV[1][2] - varyingUV[1][0], 0);
+
+		Mat<3, 3, float> B;
+		B.SetCol(0, i.Normalize());
+		B.SetCol(1, j.Normalize());
+		B.SetCol(2, bn);
+
+		Vec3f n = (B * model->SampleNormalMap(uv)).Normalize();
+
+		float diff = std::max(0.0f, n*lightDir);
+		color = model->SampleDiffuseMap(uv) * diff;
+
 		return false;
 	}
 };
 
 int main()
 {
-	model = new Model("obj/african_head.obj", "obj/african_head_diffuse.tga", "obj/african_head_nm.tga", "obj/african_head_spec.tga");
+	float* zbuffer = new float[width * height];
+	for (int i = width * height; i--; zbuffer[i] = -std::numeric_limits<float>::max());
 
+	TGAImage frame(width, height, 3);
 	LookAt(eye, center, up);
 	CreateViewportMatrix(width / 8, height / 8, width * 3 / 4, height * 3 / 4);
 	CreateProjectionMatrix(-1.0f / (eye - center).Magnitude());
-	lightDir.Normalize();
+	lightDir = Proj<3>((Projection * ModelView * Embed<4>(lightDir, 0.f))).Normalize();
 
-	TGAImage image(width, height, 3);
-	TGAImage zbuffer(width, height, 1);
-
+	model = new Model("obj/african_head.obj");
 	Shader shader;
-	shader.uniformM = Projection * ModelView;
-	shader.uniformMIT = (Projection * ModelView).InvertTranspose();
 	for (int i = 0; i < model->nFaces(); i++)
 	{
-		Vec4f screenCoords[3];
 		for (int j = 0; j < 3; j++)
 		{
-			screenCoords[j] = shader.Vertex(i, j);
+			shader.Vertex(i, j);
 		}
-		Triangle(screenCoords, shader, image, zbuffer);
+		Triangle(shader.varyingTri, shader, frame, zbuffer);
 	}
-
-	image.FlipVertical();
-	zbuffer.FlipVertical();
-	image.WriteTGAImage("resultsTGA/simple_shader.tga");
-	zbuffer.WriteTGAImage("resultsTGA/simple_shader_zbuf.tga");
-
 	delete model;
+
+	frame.FlipVertical();
+	frame.WriteTGAImage("resultsTGA/simple_shader.tga");
+
+	delete[] zbuffer;
 	return 0;
 }

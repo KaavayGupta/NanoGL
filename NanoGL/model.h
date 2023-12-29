@@ -8,7 +8,7 @@
 class Model
 {
 public:
-	Model(const char* filename, const char* diffuseMapFile, const char* normalMapFile, const char* specularMapFile);
+	Model(const char* filename, const char* diffuseMapFile = nullptr, const char* normalMapFile = nullptr, const char* specularMapFile = nullptr);
 	~Model();
 	
 	int nVerts();
@@ -27,7 +27,11 @@ public:
 	Vec3f SampleNormalMap(Vec2f uvf);
 	float SampleSpecularMap(Vec2f uvf);
 
-	const TGAImage& GetDiffuseTexture() const { return m_DiffuseMap; }
+	const TGAImage& GetDiffuseMap() const { return m_DiffuseMap; }
+	const TGAImage& GetNormalMap() const { return m_NormalMap; }
+	const TGAImage& GetSpecularMap() const { return m_SpecularMap; }
+private:
+	void LoadTexture(std::string filename, TGAImage& img, const char* suffix = nullptr);
 private:
 	TGAImage m_DiffuseMap;
 	TGAImage m_NormalMap;

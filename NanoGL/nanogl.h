@@ -18,4 +18,4 @@ struct IShader
 	virtual bool Fragment(Vec3f bar, TGAColor& color) = 0;
 };
 
-void Triangle(Vec4f* pts, IShader& shader, TGAImage& image, TGAImage& zbuffer);
+void Triangle(Mat<4, 3, float>& clipc, IShader& shader, TGAImage& image, float* zbuffer);
