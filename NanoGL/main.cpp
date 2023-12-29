@@ -53,9 +53,12 @@ struct Shader : public IShader
 		B.SetCol(2, bn);
 
 		Vec3f n = (B * model->SampleNormalMap(uv)).Normalize();
-
+		Vec3f r = (n * (n * lightDir * 2.0f) - lightDir).Normalize();	// Reflected ray
+		float spec = pow(std::max(r.z, 0.0f), model->SampleSpecularMap(uv));
 		float diff = std::max(0.0f, n*lightDir);
-		color = model->SampleDiffuseMap(uv) * diff;
+		TGAColor c = model->SampleDiffuseMap(uv) * diff;
+		color = c;
+		for (int i = 0; i < 3; i++) color.Raw[i] = std::min<float>(8 + c.Raw[i] * (diff + 0.8 * spec), 255);	// Phongs Approx: Weighted sum of ambient, diffuse and specular
 
 		return false;
 	}
