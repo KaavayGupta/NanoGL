@@ -6,6 +6,7 @@
 extern Mat4x4 ModelView;
 extern Mat4x4 Viewport;
 extern Mat4x4 Projection;
+const float depth = 2000.0f;
 
 void CreateViewportMatrix(int x, int y, int w, int h);
 void CreateProjectionMatrix(float coeff = 0.0f);	// coeff = -1/c
@@ -18,4 +19,4 @@ struct IShader
 	virtual bool Fragment(Vec3f bar, TGAColor& color) = 0;
 };
 
-void Triangle(Mat<4, 3, float>& clipc, IShader& shader, TGAImage& image, float* zbuffer);
+void Triangle(Vec4f* pts, IShader& shader, TGAImage& image, float* zbuffer);
