@@ -26,6 +26,7 @@ public:
 	TGAColor SampleDiffuseMap(Vec2f uvf);
 	Vec3f SampleNormalMap(Vec2f uvf);
 	float SampleSpecularMap(Vec2f uvf);
+	TGAColor SampleGlowMap(Vec2f uvf);
 
 	const TGAImage& GetDiffuseMap() const { return m_DiffuseMap; }
 	const TGAImage& GetNormalMap() const { return m_NormalMap; }
@@ -36,6 +37,7 @@ private:
 	TGAImage m_DiffuseMap;
 	TGAImage m_NormalMap;
 	TGAImage m_SpecularMap;
+	TGAImage m_GlowMap;
 
 	std::vector<std::vector<Vec3i>> m_Faces; // Vec3i --> vertex/uv/normal
 	std::vector<Vec3f> m_Verts;

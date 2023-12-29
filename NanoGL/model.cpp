@@ -80,6 +80,8 @@ Model::Model(const char* filename, const char* diffuseMapFile, const char* norma
 		LoadTexture(diffuseMapFile, m_SpecularMap);
 	else
 		LoadTexture(filename, m_SpecularMap, "_spec.tga");
+
+	LoadTexture(filename, m_GlowMap, "_glow.tga");
 	
 }
 
@@ -163,6 +165,12 @@ float Model::SampleSpecularMap(Vec2f uvf)
 {
 	Vec2i uv(uvf[0] * m_NormalMap.GetWidth(), uvf[1] * m_NormalMap.GetHeight());
 	return (float)m_NormalMap.GetPixel(uv[0], uv[1]).Raw[0];
+}
+
+TGAColor Model::SampleGlowMap(Vec2f uvf)
+{
+	Vec2i uv(uvf[0] * m_GlowMap.GetWidth(), uvf[1] * m_GlowMap.GetHeight());
+	return m_GlowMap.GetPixel(uv[0], uv[1]);
 }
 
 void Model::LoadTexture(std::string filename, TGAImage& img, const char* suffix)

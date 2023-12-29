@@ -65,6 +65,16 @@ struct TGAColor
 		}
 		return res;
 	}
+
+	TGAColor operator+(const TGAColor& c)
+	{
+		TGAColor res = *this;
+		for (int i = 0; i < 4; i++)
+		{
+			res.Raw[i] = c.Raw[i] + Raw[i];
+		}
+		return res;
+	}
 };
 
 class TGAImage

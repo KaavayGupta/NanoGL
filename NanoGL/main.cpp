@@ -50,7 +50,8 @@ struct Shader : public IShader
 		float spec = pow(std::max(r.z, 0.0f), model->SampleSpecularMap(uv));
 		float diff = std::max(0.f, n * l);
 		TGAColor c = model->SampleDiffuseMap(uv);
-		for (int i = 0; i < 3; i++) color.Raw[i] = std::min<float>(20 + c.Raw[i] * shadow * (1.2 * diff + .6 * spec), 255);
+		TGAColor glowColor = model->SampleGlowMap(uv);
+		for (int i = 0; i < 3; i++) color.Raw[i] = std::min<float>((20 + c.Raw[i] * shadow * (1.2f * diff + 6.0f * spec)) + glowColor.Raw[i] * 30.0f, 255);
 		return false;
 	}
 };
@@ -84,7 +85,7 @@ int main(int argc, char** argv)
 		std::cerr << "Usage: " << argv[0] << "[obj/model.obj]" << std::endl;
 	}
 
-	const char* modelFileName = argc == 2 ? argv[1] : "obj/african_head.obj";
+	const char* modelFileName = argc == 2 ? argv[1] : "obj/diablo3_pose/diablo3_pose.obj";
 	std::clog << "Rendering default " << modelFileName << std::endl;
 
 	float* zbuffer = new float[width * height];
@@ -135,7 +136,7 @@ int main(int argc, char** argv)
 		}
 
 		frame.FlipVertical();
-		frame.WriteTGAImage("resultsTGA/shadows.tga");
+		frame.WriteTGAImage("resultsTGA/framebuffer.tga");
 	}
 
 	delete model;
