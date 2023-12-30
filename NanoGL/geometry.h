@@ -5,6 +5,8 @@
 #include <cassert>
 #include <iostream>
 
+#define M_PI 3.14159265359
+
 template<size_t DimCols, size_t DimRows, typename T> class Mat;
 
 template<size_t DIM, typename T>
@@ -27,6 +29,9 @@ struct Vec<2, T>
 	template <class U> Vec<2, T>(const Vec<2, U>& v);
 	T& operator[] (const size_t i) { assert(i < 2); return i <= 0 ? x : y; }
 	const T& operator[] (const size_t i) const { assert(i < 2); return i <= 0 ? x : y; }
+	float Magnitude() { return std::sqrt(SqrMagnitude()); }
+	float SqrMagnitude() { return float(x * x + y * y); }
+	Vec<2, T>& Normalize(T l = 1) { *this = (*this) * (l / Magnitude()); return *this; }
 
 	T x, y;
 };

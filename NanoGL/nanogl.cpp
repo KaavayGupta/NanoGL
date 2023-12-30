@@ -55,31 +55,41 @@ Vec3f Barycentric(const Vec2f& A, const Vec2f& B, const Vec2f& C, const Vec2f& P
 		return Vec3f(1.0f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
 	return Vec3f(-1, 1, 1); // in this case generate negative coordinates, it will be thrown away by the rasterizator
 }
-
 void Triangle(Vec4f* pts, IShader& shader, TGAImage& image, float* zbuffer)
 {
+	Mat<4, 3, float> clipc;
+	Mat<3, 2, float> pts2;
+	for (int i = 0; i < 3; i++)
+	{
+		clipc.SetCol(i, pts[i]);
+		pts2[i] = Proj<2>(pts[i] / pts[i][3]);
+	}
+	clipc = Viewport.Invert() * clipc;
+
 	Vec2f bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 	Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+	Vec2f clamp(image.GetWidth() - 1, image.GetHeight() - 1);
 	for (int i = 0; i < 3; i++)
 	{
 		for (int j = 0; j < 2; j++)
 		{
-			bboxmin[j] = std::min(bboxmin[j], pts[i][j] / pts[i][3]);
-			bboxmax[j] = std::max(bboxmax[j], pts[i][j] / pts[i][3]);
+			bboxmin[j] = std::max(0.0f, std::min(bboxmin[j], pts2[i][j]));
+			bboxmax[j] = std::min(clamp[j], std::max(bboxmax[j], pts2[i][j]));
 		}
 	}
+
 	Vec2i P;
 	TGAColor color;
 	for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
 	{
 		for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
 		{
-			Vec3f c = Barycentric(Proj<2>(pts[0] / pts[0][3]), Proj<2>(pts[1] / pts[1][3]), Proj<2>(pts[2] / pts[2][3]), Proj<2>(P));
-			float z = pts[0][2] * c.x + pts[1][2] * c.y + pts[2][2] * c.z;
-			float w = pts[0][3] * c.x + pts[1][3] * c.y + pts[2][3] * c.z;
-			int fragDepth = z / w;
-			if (c.x < 0 || c.y < 0 || c.z<0 || zbuffer[P.x + P.y * image.GetWidth()] > fragDepth) continue;
-			bool discard = shader.Fragment(c, color);
+			Vec3f bcScreen = Barycentric(pts2[0], pts2[1], pts2[2], P);
+			Vec3f bcClip = Vec3f(bcScreen.x / pts[0][3], bcScreen.y / pts[1][3], bcScreen.z / pts[2][3]);
+			bcClip = bcClip / (bcClip.x + bcClip.y + bcClip.z);
+			float fragDepth = clipc[2] * bcClip;
+			if (bcScreen.x < 0 || bcScreen.y < 0 || bcScreen.z < 0 || zbuffer[P.x + P.y * image.GetWidth()] > fragDepth) continue;
+			bool discard = shader.Fragment(bcClip, color);
 			if (!discard)
 			{
 				zbuffer[P.x + P.y * image.GetWidth()] = fragDepth;
