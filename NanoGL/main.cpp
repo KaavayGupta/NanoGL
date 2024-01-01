@@ -56,13 +56,13 @@ int main(int argc, char** argv)
 	}
 
 	AOImage->FlipVertical();
-	AOImage->WriteTGAImage("resultsTGA/ao.tga");
+	AOImage->WriteTGAImage("ao.tga");
 	
 	depthImage->FlipVertical();
-	depthImage->WriteTGAImage("resultsTGA/depth.tga");
+	depthImage->WriteTGAImage("depth.tga");
 
 	frame.FlipVertical();
-	frame.WriteTGAImage("resultsTGA/framebuffer.tga");
+	frame.WriteTGAImage("framebuffer.tga");
 
 	delete AOImage;
 	delete depthImage;
