@@ -93,7 +93,7 @@ void ModelRenderer::Render(TGAImage& frame, const Vec3f& eye, const Vec3f& cente
 		CreateViewportMatrix(m_Width / 8, m_Height / 8, m_Width * 3 / 4, m_Height * 3 / 4);
 		CreateProjectionMatrix(-1.0f / (eye - center).Magnitude());
 
-		Shader shader(ModelView, (Projection * ModelView).InvertTranspose(), MShadow * (Viewport * Projection * ModelView).Invert(), *m_Model, lightDir, m_ShadowBuffer, m_AOImage);
+		Shader shader(Viewport*Projection*ModelView, (Viewport*Projection * ModelView).InvertTranspose(), MShadow * (Viewport * Projection * ModelView).Invert(), *m_Model, lightDir, m_ShadowBuffer, m_AOImage);
 		Vec4f screenCoords[3];
 		for (int i = 0; i < m_Model->nFaces(); i++)
 		{

@@ -74,7 +74,7 @@ Model::Model(const char* filename, const char* diffuseMapFile, const char* norma
 	if (normalMapFile)
 		LoadTexture(normalMapFile, m_NormalMap);
 	else
-		LoadTexture(filename, m_NormalMap, "_nm.tga");
+		LoadTexture(filename, m_NormalMap, "_nm_tangent.tga");
 
 	if (diffuseMapFile)
 		LoadTexture(diffuseMapFile, m_SpecularMap);

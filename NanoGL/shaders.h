@@ -28,6 +28,7 @@ struct Shader : public IShader
 {
 	Mat<2, 3, float> varyingUV;
 	Mat<3, 3, float> varyingTri;
+	Mat<3, 3, float> varyingNorm;
 	Mat<4, 4, float> uniformM;	// Projection * ModelView
 	Mat<4, 4, float> uniformMIT; // (Projection * ModelView).InvertTranspose()
 	Mat<4, 4, float> uniformMshadow; // transform framebuffer screen coordinates to shadowbuffer screen coordinates
@@ -37,13 +38,15 @@ struct Shader : public IShader
 	const TGAImage* const uniformAOImage;
 
 	Shader(const Mat4x4& M, const Mat4x4& MIT, const Mat4x4& Mshadow, const Model& model, const Vec3f& light, const float* const shadowBuffer, const TGAImage* const AOImage)
-		: uniformM(M), uniformMIT(MIT), uniformMshadow(Mshadow), uniformModel(model), uniformLight(light), uniformShadowBuffer(shadowBuffer), uniformAOImage(AOImage)
+		: uniformM(M), uniformMIT(MIT), uniformMshadow(Mshadow), uniformModel(model), uniformShadowBuffer(shadowBuffer), uniformAOImage(AOImage)
 	{
+		uniformLight = Proj<3>(uniformM * Embed<4>(light)).Normalize(); // light vector
 	}
 
 	virtual Vec4f Vertex(int iface, int nthvert)
 	{
 		varyingUV.SetCol(nthvert, uniformModel.GetUV(iface, nthvert));
+		varyingNorm.SetCol(nthvert, Proj<3>((Viewport * Projection * ModelView).InvertTranspose() * Embed<4>(uniformModel.GetNormal(iface, nthvert), 0.0f)));
 		Vec4f glVertex = Viewport * Projection * ModelView * Embed<4>(uniformModel.GetVert(iface, nthvert));
 		varyingTri.SetCol(nthvert, Proj<3>(glVertex / glVertex[3]));
 		return glVertex;
@@ -56,16 +59,31 @@ struct Shader : public IShader
 		int idx = int(sbP[0]) + int(sbP[1]) * uniformAOImage->GetWidth(); // index in the shadowbuffer array
 		float shadow = .3 + .7 * (uniformShadowBuffer[idx] < sbP[2] + 43.34);
 
+		// Tangent Normal Calculations
+		Vec3f bn = (varyingNorm * bar).Normalize();
+		Mat<3, 3, float> A;
+		A[0] = varyingTri.Col(1) - varyingTri.Col(0);
+		A[1] = varyingTri.Col(2) - varyingTri.Col(0);
+		A[2] = bn;
+		Mat<3, 3, float> AI = A.Invert();
+
+		Vec3f i = AI * Vec3f(varyingUV[0][1] - varyingUV[0][0], varyingUV[0][2] - varyingUV[0][0], 0);
+		Vec3f j = AI * Vec3f(varyingUV[1][1] - varyingUV[1][0], varyingUV[1][2] - varyingUV[1][0], 0);
+
+		Mat<3, 3, float> B;
+		B.SetCol(0, i.Normalize());
+		B.SetCol(1, j.Normalize());
+		B.SetCol(2, bn);
+
 		Vec2f uv = varyingUV * bar;                 // interpolate uv for the current pixel
-		Vec3f n = Proj<3>(uniformMIT * Embed<4>(uniformModel.SampleNormalMap(uv))).Normalize(); // normal
-		Vec3f l = Proj<3>(uniformM * Embed<4>(uniformLight)).Normalize(); // light vector
-		Vec3f r = (n * (n * l * 2.f) - l).Normalize();   // reflected light
+		Vec3f n = (B * uniformModel.SampleNormalMap(uv)).Normalize(); // normal
+		Vec3f r = (n * (n * uniformLight * 2.f) - uniformLight).Normalize();   // reflected light
 		float spec = pow(std::max(r.z, 0.0f), uniformModel.SampleSpecularMap(uv));
-		float diff = std::max(0.f, n * l);
+		float diff = std::max(0.f, n * uniformLight);
 		TGAColor c = uniformModel.SampleDiffuseMap(uv);
 		TGAColor glowColor = uniformModel.SampleGlowMap(uv);
 		TGAColor ao = uniformAOImage->GetPixel(uv[0] * uniformAOImage->GetWidth(), uv[1] * uniformAOImage->GetHeight()) * (1 / 255.0f);
-		for (int i = 0; i < 3; i++) color.Raw[i] = std::min<float>((ao.Raw[i] + c.Raw[i] * shadow * (1.2f * diff + 6.0f * spec)) + glowColor.Raw[i] * 30.0f, 255);
+		for (int i = 0; i < 3; i++) color.Raw[i] = std::min<float>((ao.Raw[i] + c.Raw[i] * shadow * (1.0f * diff + 6.0f * spec)) + glowColor.Raw[i] * 30.0f, 255);
 		return false;
 	}
 };
