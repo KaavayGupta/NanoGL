@@ -110,3 +110,57 @@ struct DepthShader : public IShader
 		return false;
 	}
 };
+
+struct GouraudShader : public IShader 
+{
+	Vec3f varyingIntensity;
+	const Vec3f& uniformLightDir;
+	const Model& uniformModel;
+
+	GouraudShader(const Model& model, const Vec3f& lightDir) : uniformModel(model), uniformLightDir(lightDir) {}
+
+	virtual Vec4f Vertex(int iface, int nthvert)
+	{
+		Vec4f glVertex = Embed<4>(uniformModel.GetVert(iface, nthvert));
+		glVertex = Viewport * Projection * ModelView * glVertex;
+		varyingIntensity[nthvert] = std::max(0.f, uniformModel.GetNormal(iface, nthvert) * uniformLightDir);
+		return glVertex;
+	}
+
+	virtual bool Fragment(Vec3f bar, TGAColor& color) 
+	{
+		float intensity = varyingIntensity * bar;
+		color = TGAColor(255, 255, 255) * intensity;
+		return false;
+	}
+};
+
+struct ToonShader : public IShader 
+{
+	Vec3f varyingIntensity;
+	const Vec3f& uniformLightDir;
+	const Model& uniformModel;
+
+	ToonShader(const Model& model, const Vec3f& lightDir) : uniformModel(model), uniformLightDir(lightDir) {}
+
+	virtual Vec4f Vertex(int iface, int nthvert) 
+	{
+		Vec4f glVertex = Embed<4>(uniformModel.GetVert(iface, nthvert));
+		glVertex = Viewport * Projection * ModelView * glVertex;
+		varyingIntensity[nthvert] = std::max(0.f, uniformModel.GetNormal(iface, nthvert) * uniformLightDir);
+		return glVertex;
+	}
+
+	virtual bool Fragment(Vec3f bar, TGAColor& color) 
+	{
+		float intensity = varyingIntensity * bar;
+		if (intensity > .85) intensity = 1;
+		else if (intensity > .60) intensity = .80;
+		else if (intensity > .45) intensity = .60;
+		else if (intensity > .30) intensity = .45;
+		else if (intensity > .15) intensity = .30;
+		color = TGAColor(155, 0, 100) * intensity;
+		return false;
+	}
+};
+

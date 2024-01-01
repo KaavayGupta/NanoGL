@@ -20,7 +20,7 @@ int main(int argc, char** argv)
 	if (argc < 2)
 	{
 		std::cerr << "Usage: " << argv[0] << "obj/model.obj" << std::endl;
-		//return 1;
+		return 1;
 	}
 
 	float* zbuffer = new float[width * height];
@@ -43,15 +43,6 @@ int main(int argc, char** argv)
 	for (int i = 0; i < argc - 1; i++)
 	{
 		ModelRenderer modelRenderer(argv[i+1], AOImage, depthImage, zbuffer, shadowbuffer);
-		modelRenderer.Render(frame, eye, center, up, lightDir);
-	}
-
-	{
-		ModelRenderer modelRenderer("obj/african_head/african_head_eye_inner.obj", AOImage, depthImage, zbuffer, shadowbuffer);
-		modelRenderer.Render(frame, eye, center, up, lightDir);
-	}
-	{
-		ModelRenderer modelRenderer("obj/african_head/african_head.obj", AOImage, depthImage, zbuffer, shadowbuffer);
 		modelRenderer.Render(frame, eye, center, up, lightDir);
 	}
 
