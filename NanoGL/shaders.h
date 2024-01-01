@@ -56,7 +56,7 @@ struct Shader : public IShader
 	{
 		Vec4f sbP = uniformMshadow * Embed<4>(varyingTri * bar); // corresponding point in the shadow buffer
 		sbP = sbP / sbP[3];
-		int idx = int(sbP[0]) + int(sbP[1]) * uniformAOImage->GetWidth(); // index in the shadowbuffer array
+		int idx = std::max(0,int(sbP[0])) + std::max(0,int(sbP[1])) * uniformAOImage->GetWidth(); // index in the shadowbuffer array
 		float shadow = .3 + .7 * (uniformShadowBuffer[idx] < sbP[2] + 43.34);
 
 		// Tangent Normal Calculations
@@ -83,7 +83,7 @@ struct Shader : public IShader
 		TGAColor c = uniformModel.SampleDiffuseMap(uv);
 		TGAColor glowColor = uniformModel.SampleGlowMap(uv);
 		TGAColor ao = uniformAOImage->GetPixel(uv[0] * uniformAOImage->GetWidth(), uv[1] * uniformAOImage->GetHeight()) * (1 / 255.0f);
-		for (int i = 0; i < 3; i++) color.Raw[i] = std::min<float>((ao.Raw[i] + c.Raw[i] * shadow * (1.0f * diff + 6.0f * spec)) + glowColor.Raw[i] * 30.0f, 255);
+		for (int i = 0; i < 3; i++) color.Raw[i] = std::min<float>((ao.Raw[i] + c.Raw[i] * shadow * (1.0f * diff + 1.1f * spec)) + glowColor.Raw[i] * 30.0f, 255);
 		return false;
 	}
 };

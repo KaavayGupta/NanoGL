@@ -10,8 +10,8 @@
 constexpr int width = 800;
 constexpr int height = 800;
 
-const Vec3f lightDir(1, 1, 2.5f);
-const Vec3f eye(0.2f, 0.6f, 4);
+const Vec3f lightDir(1, 1, 2);
+const Vec3f eye(1, 1, 4);
 const Vec3f center(0, 0, 0);
 const Vec3f up(0, 1, 0);
 
@@ -36,13 +36,22 @@ int main(int argc, char** argv)
 	{
 		for (int y = 0; y < height; y++)
 		{
-			frame.SetPixel(x, y, TGAColor(15, 15, 15));
+			frame.SetPixel(x, y, TGAColor(20, 20, 20));
 		}
 	}
 	
 	for (int i = 0; i < argc - 1; i++)
 	{
 		ModelRenderer modelRenderer(argv[i+1], AOImage, depthImage, zbuffer, shadowbuffer);
+		modelRenderer.Render(frame, eye, center, up, lightDir);
+	}
+
+	{
+		ModelRenderer modelRenderer("obj/african_head/african_head_eye_inner.obj", AOImage, depthImage, zbuffer, shadowbuffer);
+		modelRenderer.Render(frame, eye, center, up, lightDir);
+	}
+	{
+		ModelRenderer modelRenderer("obj/african_head/african_head.obj", AOImage, depthImage, zbuffer, shadowbuffer);
 		modelRenderer.Render(frame, eye, center, up, lightDir);
 	}
 

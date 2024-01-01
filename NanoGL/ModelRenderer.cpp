@@ -33,7 +33,7 @@ void ModelRenderer::Render(TGAImage& frame, const Vec3f& eye, const Vec3f& cente
 {
 	m_Width = frame.GetWidth();
 	m_Height = frame.GetHeight();
-
+	{
 		std::clog << "Calculating Ambient Occlusion..." << std::endl;
 		LookAt(eye, center, up);
 		CreateViewportMatrix(m_Width / 8, m_Height / 8, m_Width * 3 / 4, m_Height * 3 / 4);
@@ -62,7 +62,7 @@ void ModelRenderer::Render(TGAImage& frame, const Vec3f& eye, const Vec3f& cente
 		}
 
 		std::clog << "DONE" << std::endl;
-
+	}
 	{
 		std::clog << "Calculate Depth Map..." << std::endl;
 
