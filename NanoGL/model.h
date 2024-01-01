@@ -11,22 +11,22 @@ public:
 	Model(const char* filename, const char* diffuseMapFile = nullptr, const char* normalMapFile = nullptr, const char* specularMapFile = nullptr);
 	~Model();
 	
-	int nVerts();
-	int nFaces();
-	int nUVs();
-	int nNorms();
+	int nVerts() const;
+	int nFaces() const;
+	int nUVs() const;
+	int nNorms() const;
 	
-	std::vector<int> GetFace(int idx);
-	Vec3f GetVert(int i);
-	Vec3f GetVert(int iFace, int nthVertex);
-	Vec2f GetUV(int i);
-	Vec2f GetUV(int iFace, int nthVertex);
-	Vec3f GetNormal(int iFace, int nthVertex, bool normalize = true);
+	std::vector<int> GetFace(int idx) const;
+	Vec3f GetVert(int i) const;
+	Vec3f GetVert(int iFace, int nthVertex) const;
+	Vec2f GetUV(int i) const;
+	Vec2f GetUV(int iFace, int nthVertex) const;
+	Vec3f GetNormal(int iFace, int nthVertex, bool normalize = true) const;
 
-	TGAColor SampleDiffuseMap(Vec2f uvf);
-	Vec3f SampleNormalMap(Vec2f uvf);
-	float SampleSpecularMap(Vec2f uvf);
-	TGAColor SampleGlowMap(Vec2f uvf);
+	TGAColor SampleDiffuseMap(Vec2f uvf) const;
+	Vec3f SampleNormalMap(Vec2f uvf) const;
+	float SampleSpecularMap(Vec2f uvf) const;
+	TGAColor SampleGlowMap(Vec2f uvf) const;
 
 	const TGAImage& GetDiffuseMap() const { return m_DiffuseMap; }
 	const TGAImage& GetNormalMap() const { return m_NormalMap; }

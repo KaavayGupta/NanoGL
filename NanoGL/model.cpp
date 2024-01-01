@@ -89,37 +89,37 @@ Model::~Model()
 {
 }
 
-int Model::nVerts()
+int Model::nVerts() const
 {
 	return (int)m_Verts.size();
 }
 
-int Model::nFaces()
+int Model::nFaces() const
 {
 	return (int)m_Faces.size();
 }
 
-int Model::nUVs()
+int Model::nUVs() const
 {
 	return (int)m_UVs.size();
 }
-
-int Model::nNorms()
+ 
+int Model::nNorms() const
 {
 	return (int)m_Norms.size();
 }
 
-Vec3f Model::GetVert(int i)
+Vec3f Model::GetVert(int i) const
 {
 	return m_Verts[i];
 }
 
-Vec3f Model::GetVert(int iFace, int nthVertex)
+Vec3f Model::GetVert(int iFace, int nthVertex) const
 {
 	return m_Verts[m_Faces[iFace][nthVertex][0]];
 }
 
-std::vector<int> Model::GetFace(int idx)
+std::vector<int> Model::GetFace(int idx) const
 {
 	std::vector<int> face;
 	for (int i = 0; i < m_Faces[idx].size(); i++)
@@ -129,29 +129,29 @@ std::vector<int> Model::GetFace(int idx)
 	return face;
 }
 
-Vec2f Model::GetUV(int i)
+Vec2f Model::GetUV(int i) const
 {
 	return m_UVs[i];
 }
 
-Vec2f Model::GetUV(int iFace, int nthVertex)
+Vec2f Model::GetUV(int iFace, int nthVertex) const
 {
 	return m_UVs[m_Faces[iFace][nthVertex][1]];
 }
 
-Vec3f Model::GetNormal(int iFace, int nthVertex, bool normalize)
+Vec3f Model::GetNormal(int iFace, int nthVertex, bool normalize) const
 {
 	Vec3f n = m_Norms[m_Faces[iFace][nthVertex][2]];
 	return normalize ? n.Normalize() : n;
 }
 
-TGAColor Model::SampleDiffuseMap(Vec2f uvf)
+TGAColor Model::SampleDiffuseMap(Vec2f uvf) const
 {
 	Vec2i uv(uvf[0] * m_DiffuseMap.GetWidth(), uvf[1] * m_DiffuseMap.GetHeight());
 	return m_DiffuseMap.GetPixel(uv[0], uv[1]);
 }
 
-Vec3f Model::SampleNormalMap(Vec2f uvf)
+Vec3f Model::SampleNormalMap(Vec2f uvf) const
 {
 	Vec2i uv(uvf[0] * m_NormalMap.GetWidth(), uvf[1] * m_NormalMap.GetHeight());
 	TGAColor c = m_NormalMap.GetPixel(uv[0], uv[1]);
@@ -161,13 +161,13 @@ Vec3f Model::SampleNormalMap(Vec2f uvf)
 	return res;
 }
 
-float Model::SampleSpecularMap(Vec2f uvf)
+float Model::SampleSpecularMap(Vec2f uvf) const
 {
 	Vec2i uv(uvf[0] * m_NormalMap.GetWidth(), uvf[1] * m_NormalMap.GetHeight());
 	return (float)m_NormalMap.GetPixel(uv[0], uv[1]).Raw[0];
 }
 
-TGAColor Model::SampleGlowMap(Vec2f uvf)
+TGAColor Model::SampleGlowMap(Vec2f uvf) const
 {
 	Vec2i uv(uvf[0] * m_GlowMap.GetWidth(), uvf[1] * m_GlowMap.GetHeight());
 	return m_GlowMap.GetPixel(uv[0], uv[1]);
